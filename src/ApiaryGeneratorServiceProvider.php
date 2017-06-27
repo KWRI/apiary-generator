@@ -4,7 +4,7 @@ namespace KWRI\ApiaryGenerator;
 use Illuminate\Support\ServiceProvider;
 use KWRI\ApiaryGenerator\Console\ApiaryCommand;
 
-class LaravelDddServiceProvider extends ServiceProvider
+class ApiaryGeneratorServiceProvider extends ServiceProvider
 {
     /**
      * Bootstrap the application events.

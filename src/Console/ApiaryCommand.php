@@ -2,6 +2,8 @@
 
 namespace KWRI\ApiaryGenerator\Console;
 
+use Illuminate\Console\Command;
+
 class ApiaryCommand extends Command
 {
     /**
