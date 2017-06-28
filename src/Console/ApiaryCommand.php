@@ -69,7 +69,7 @@ class ApiaryCommand extends Command
      */
     public function prepareAttributes($parameters)
     {
-        $attributes = "    - `id`: `1234` (number)\n";
+        $attributes = null;
 
         if (array_has($parameters, 'parameters')) {
             foreach (array_get($parameters, 'parameters') as $name => $parameter) {
