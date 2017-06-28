@@ -28,11 +28,14 @@ class ApiaryCommand extends Command
     protected $signature = 'apiary:generate 
                              {--route= : The router to be used}
                              {--user= : The user ID to use for API response calls}
+                             {--url= : Url}
                         ';
 
     protected $resource;
     protected $attributes;
     protected $route;
+    protected $url;
+    protected $user;
 
 
     public function __construct()
@@ -42,9 +45,10 @@ class ApiaryCommand extends Command
 
     public function handle()
     {
-        $this->setUserToBeImpersonated($this->option('user'));
         $this->route = $this->option('route');
         $this->resource = $this->setResource($this->route);
+        $this->setUserToBeImpersonated($this->option('user'));
+        $this->url = trim($this->option('url'), '/');
 
         $routeParser = new RouteParser();
 
@@ -65,7 +69,7 @@ class ApiaryCommand extends Command
      */
     public function prepareAttributes($parameters)
     {
-        $attributes = null;
+        $attributes = "    - `id`: `1234` (number)\n";
 
         if (array_has($parameters, 'parameters')) {
             foreach (array_get($parameters, 'parameters') as $name => $parameter) {
@@ -109,10 +113,11 @@ class ApiaryCommand extends Command
     /**
      * Resource usually capitalized singular route
      * @param $resource
+     * @return string
      */
     public function setResource($resource)
     {
-        $this->resource = ucfirst(str_singular($resource));
+        return $this->resource = ucfirst(str_singular($resource));
     }
 
     /**
@@ -121,10 +126,10 @@ class ApiaryCommand extends Command
     private function setUserToBeImpersonated($actAs)
     {
         if (!empty($actAs)) {
-            $user = app()->make(config('api-docs.user'))->find($actAs);
+            $this->user = app()->make(config('api-docs.user'))->find($actAs);
 
-            if ($user) {
-                return $this->laravel['auth']->guard()->setUser($user);
+            if ($this->user) {
+                return $this->laravel['auth']->guard()->setUser($this->user);
             }
         }
     }
@@ -167,12 +172,16 @@ class ApiaryCommand extends Command
             '{attributes}',
             '{route}',
             '{resource}',
+            '{url}',
+            '{token}',
         ];
 
         $replacements = [
             $this->attributes,
             $this->route,
             $this->resource,
+            $this->url,
+            $this->user->getAccessToken()->getAccessToken(),
         ];
 
         return str_replace($replacings, $replacements, $fileContent);

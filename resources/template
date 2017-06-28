@@ -1,26 +1,7 @@
 FORMAT: 1A
-HOST: https://dev.command-api.kw.com/api/v1
+HOST: {url}
 
-## Query parameters
-
-All routes support query parameters to refine responses
-
-- **[include](http://jsonapi.org/format/#fetching-relationships)**,
-  e.g. `GET /session?include=account.profile` to include properties of the
-  profile relationship
-- **[fields](http://jsonapi.org/format/#fetching-sparse-fieldsets)**,
-  e.g. `GET /session?fields[account]=username` to only return the username
-  of the account relationship
-- **[sort](http://jsonapi.org/format/#fetching-sorting)**,
-  e.g. `GET /accounts?sort=username` to sort all accounts ascending by name
-- **[page](http://jsonapi.org/format/#fetching-pagination)**,
-  e.g. `GET /accounts?page[number]=1&page[size]=10` to return only the first
-  10 accounts
-- **[filter](http://jsonapi.org/format/#fetching-filtering)**,
-  The `filter` is not defined by JSON API. Implementations must specify if how
-  the `filter` query parameter is supported.
-
-## Group {resource}
+# {resource}
 
 ## {resource} [/{route}]
 
@@ -32,7 +13,7 @@ All routes support query parameters to refine responses
 
 + Attributes (object)
     + attributes (object)
-        - type: contact
+        - type: {route}
         - data ({resource})
 
 + Request (application/vnd.api+json)
@@ -40,7 +21,7 @@ All routes support query parameters to refine responses
     + Headers
 
             Accept: application/vnd.api+json
-            Authorization: Bearer 123234
+            Authorization: Bearer {token}
 
 + Response 204 (application/vnd.api+json)
     + Attributes
@@ -49,7 +30,7 @@ All routes support query parameters to refine responses
 
     + Headers
 
-            Location: https://dev.command-api.kw.com/{route}
+            Location: {url}/{route}
 
 ### List {resource} [GET]
 
@@ -58,17 +39,25 @@ All routes support query parameters to refine responses
     + Headers
 
             Accept: application/vnd.api+json
-            Authorization: Bearer 123234
+            Authorization: Bearer {token}
 
 + Response 200 (application/vnd.api+json)
     + Attributes
         + data (array)
             + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
+            + ({resource})
 
 + Response 401 (application/vnd.api+json)
     + Attributes
         + errors (Error)
-
 
 ## Data Structures
 ### Error
