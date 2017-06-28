@@ -1,0 +1,127 @@
+FORMAT: 1A
+HOST: https://dev.command-api.kw.com/api/v1
+
+## Query parameters
+
+All routes support query parameters to refine responses
+
+- **[include](http://jsonapi.org/format/#fetching-relationships)**,
+  e.g. `GET /session?include=account.profile` to include properties of the
+  profile relationship
+- **[fields](http://jsonapi.org/format/#fetching-sparse-fieldsets)**,
+  e.g. `GET /session?fields[account]=username` to only return the username
+  of the account relationship
+- **[sort](http://jsonapi.org/format/#fetching-sorting)**,
+  e.g. `GET /accounts?sort=username` to sort all accounts ascending by name
+- **[page](http://jsonapi.org/format/#fetching-pagination)**,
+  e.g. `GET /accounts?page[number]=1&page[size]=10` to return only the first
+  10 accounts
+- **[filter](http://jsonapi.org/format/#fetching-filtering)**,
+  The `filter` is not defined by JSON API. Implementations must specify if how
+  the `filter` query parameter is supported.
+
+## Group Contacts
+
+## {resource} [/{route}]
+
++ Attributes
+
+    - `id`: `1234` (number)
+    - `prefix`: `Miss` (string)
+    - `first_name`: `Marina` (string)
+    - `middle_name`: `Joanny` (string)
+    - `last_name`: `Gibson` (string)
+    - `preferred_name`: `Marina Gibson` (string)
+    - `legal_name`: `Marina Joanny Gibson` (string)
+    - `suffix`: `I` (string)
+    - `date_of_birth`: `2002-02-02` (string)
+    - `contact_types` (enum)
+        - buyer
+        - renter
+        - owner
+
+    - `motivations` (enum)
+        - `first-home`
+        - relocation
+
+    - `primary_motivation_note`: `Deleniti et nesciunt possimus qui cumque qui mollitia consequatur.` (string)
+    - `is_pre_approved`: `true` (boolean)
+    - `is_primary`: `true` (boolean)
+    - `status`: `1` (number)
+    - `profile_photo` (object)
+    - `stage` (object)
+    - `lead_type`: `rent` (string)
+    - `is_starred`: `false` (boolean)
+    - `available_to_contact_date` (object)
+    - `buyer_type` (object)
+    - `pre_approved_amount` (number)
+    - `number_in_household` (number)
+    - `background_info` (object)
+    - `touch_count` (number)
+    - `initial_contact_date`: `1983-11-10 14:21:51` (string)
+    - `last_contact_date`: `2017-06-23 20:27:16` (string)
+    - `created_at`: `2017-06-23 20:27:16` (string)
+    - `updated_at`: `2017-06-23 20:27:16` (string)
+    - `company_name` (string)
+    - `company_address`: `3114 Farrell Mall South Cliffordville, OH 12336-2071` (string)
+    - `company_title`: `Teller` (string)
+    - `company_department`: `Logistics` (string)
+    - `primary_email`: `jhodkiewicz@yahoo.com` (string)
+    - `primary_phone`: `+1 514-794-7832` (string)
+
+### Create a {resource} [POST]
+
++ Attributes (object)
+    + attributes (object)
+        - type: contact
+        - data ({resource})
+
++ Request (application/vnd.api+json)
+
+    + Headers
+
+            Accept: application/vnd.api+json
+            Authorization: Bearer 123234
+
++ Response 204 (application/vnd.api+json)
+    + Attributes
+        + attributes (object)
+            - type: contact
+            - data ({resource})
+
+    + Headers
+
+            Location: https://dev.command-api.kw.com/{route}
+
+### List contacts [GET]
+
++ Request (application/vnd.api+json)
+
+    + Headers
+
+            Accept: application/vnd.api+json
+            Authorization: Bearer 123234
+
++ Response 200 (application/vnd.api+json)
+    + Attributes
+        + data (array)
+            + ({resource})
+                - first_name: `Mochamad Gufron`
+            + ({resource})
+            + ({resource})
+
++ Response 401 (application/vnd.api+json)
+    + Attributes
+        + errors (Error)
+
+
+## Data Structures
+### Error
++ links (string)
++ status (enum[number])
+    - 404
+    - 401
+    - 400
+    - 403
++ code (string)
++ title (string)
