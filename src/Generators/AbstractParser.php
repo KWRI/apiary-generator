@@ -8,6 +8,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use KWRI\ApiaryGenerator\Parsers\RuleDescriptionParser as Description;
+
 
 /**
  * Class AbstractGenerator.

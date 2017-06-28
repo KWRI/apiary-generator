@@ -5,9 +5,14 @@ namespace KWRI\ApiaryGenerator\Console;
 use Illuminate\Console\Command;
 use KWRI\ApiaryGenerator\Generators\AbstractParser;
 use KWRI\ApiaryGenerator\Generators\RouteParser;
+use File;
 
 class ApiaryCommand extends Command
 {
+    protected $template = __DIR__ . '/../../resources/template';
+
+
+
     /**
      * The console command name.
      *
@@ -30,31 +35,52 @@ class ApiaryCommand extends Command
 
     protected $db;
 
+    protected $resource;
+
 
     public function __construct()
     {
         parent::__construct();
         $this->db = app()->make('db');
-
     }
 
 
     public function handle()
     {
-
         $this->setUserToBeImpersonated($this->option('user'));
         $route = $this->option('route');
+
+        $this->setResource($route);
 
 
         $routeParser = new RouteParser();
         $parsedRoutes = $this->processLaravelRoutes($routeParser, $route);
 
+        $this->write();
     }
 
-    
+
+    public function write()
+    {
+        if (!File::exists(storage_path('apiary'))) {
+            File::makeDirectory(storage_path('apiary'));
+        }
+
+        if (!File::exists(storage_path('apiary/' . $this->resource))) {
+            File::makeDirectory(storage_path('apiary/' . $this->resource));
+        }
+
+        File::put(
+            storage_path('apiary/' . $this->resource) . "/" . $this->resource,
+            $this->prepare(File::get($this->template))
+        );
+    }
 
 
-
+    public function setResource($resource)
+    {
+        $this->resource = ucfirst(str_singular($resource));
+    }
 
 
     /**
@@ -153,18 +179,7 @@ class ApiaryCommand extends Command
         ];
 
         $replacements = [
-            $this->getProvidedName(),
-            $this->getAppNamespace(),
-            $this->getTestsNamespace(),
-            $this->getTable(),
-            $this->getSettersGetters($this->fields),
-            $this->getSettersGetters($this->fields, true),
-            $this->getFillable($this->fields),
-            $this->getRepositoryPayloads($this->fields),
-            $this->getDirectory(),
-            $this->getEloquentTests($this->fields),
-            $this->getRepositoryTests($this->fields),
-            $this->getRepositoryDataTests($this->fields),
+
         ];
 
         return str_replace($replacings, $replacements, $fileContent);
