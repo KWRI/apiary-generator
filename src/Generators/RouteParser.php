@@ -22,22 +22,13 @@ class RouteParser extends AbstractParser
         return $route->getUri();
     }
 
-    /**
-     * @param \Illuminate\Routing\Route $route
-     * @param array                     $bindings
-     * @param array                     $headers
-     * @param bool                      $withResponse
-     *
-     * @return array
-     */
-    public function processRoute($route, $bindings = [], $headers = [], $withResponse = true)
+    public function getRouteParameters($route, $bindings = [])
     {
-
         $routeAction = $route->getAction();
         $routeGroup = $this->getRouteGroup($routeAction['uses']);
         $routeDescription = $this->getRouteDescription($routeAction['uses']);
 
-        $parsedRoute = $this->getParameters([
+        return $this->getParameters([
             'id' => md5($route->getUri().':'.implode($route->getMethods())),
             'resource' => $routeGroup,
             'title' => $routeDescription['short'],
@@ -48,19 +39,32 @@ class RouteParser extends AbstractParser
             'response' => '',
             'responseCode' => '',
         ], $routeAction, $bindings);
+    }
 
-        if ($withResponse) {
-            $response = $this->getRouteResponse($route, $bindings, $headers, $parsedRoute);
-            if ($response->headers->get('Content-Type') === 'application/json' || !empty($response)) {
-                $content = json_encode(json_decode($response->getContent()), JSON_PRETTY_PRINT);
-            } else {
-                $content = $response->getContent();
-            }
 
-            if ($response->getStatusCode() < 301) {
-                $parsedRoute['response'] = $content;
-                $parsedRoute['responseCode'] = $response->getStatusCode();
-            }
+
+    /**
+     * @param \Illuminate\Routing\Route $route
+     * @param array                     $bindings
+     * @param array                     $headers
+     * @param bool                      $withResponse
+     *
+     * @return array
+     */
+    public function processRoute($route, $bindings = [], $headers = [])
+    {
+        $parsedRoute = $this->getRouteParameters($route, $bindings);
+
+        $response = $this->getRouteResponse($route, $bindings, $headers, $parsedRoute);
+        if ($response->headers->get('Content-Type') === 'application/json' || !empty($response)) {
+            $content = json_encode(json_decode($response->getContent()), JSON_PRETTY_PRINT);
+        } else {
+            $content = $response->getContent();
+        }
+
+        if ($response->getStatusCode() < 301) {
+            $parsedRoute['response'] = $content;
+            $parsedRoute['responseCode'] = $response->getStatusCode();
         }
 
         return $parsedRoute;

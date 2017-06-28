@@ -39,7 +39,7 @@ abstract class AbstractParser
      *
      * @return mixed
      */
-    protected function getParameters($routeData, $routeAction, $bindings)
+    public function getParameters($routeData, $routeAction, $bindings)
     {
         $validator = Validator::make([], $this->getRouteRules($routeAction['uses'], $bindings));
 
@@ -277,8 +277,8 @@ abstract class AbstractParser
                 $attributeData['description'][] = Description::parse($rule)->getDescription();
                 break;
             case 'in':
-                $attributeData['description'][] =
-                    Description::parse($rule)->with($this->fancyImplode($parameters, ', ', ' or '))->getDescription();
+                $attributeData['description'] = $parameters;
+                $attributeData['type'] = 'enum';
 
                 if (isset(array_flip($parameters)[$resourse])) {
                     $attributeData['value'] = $resourse;
@@ -286,12 +286,9 @@ abstract class AbstractParser
                     $attributeData['value'] = $faker->randomElement($parameters);
                 }
 
-
-
                 break;
             case 'not_in':
-                $attributeData['description'][] =
-                    Description::parse($rule)->with($this->fancyImplode($parameters, ', ', ' or '))->getDescription();
+                $attributeData['description'] = $parameters;
                 $attributeData['value'] = $faker->word;
                 break;
             case 'min':

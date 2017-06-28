@@ -11,8 +11,6 @@ class ApiaryCommand extends Command
 {
     protected $template = __DIR__ . '/../../resources/template';
 
-
-
     /**
      * The console command name.
      *
@@ -30,36 +28,68 @@ class ApiaryCommand extends Command
     protected $signature = 'apiary:generate 
                              {--route= : The router to be used}
                              {--user= : The user ID to use for API response calls}
-                             {--bindings= : Bindings}
                         ';
 
-    protected $db;
-
     protected $resource;
+    protected $attributes;
+    protected $route;
 
 
     public function __construct()
     {
         parent::__construct();
-        $this->db = app()->make('db');
     }
-
 
     public function handle()
     {
         $this->setUserToBeImpersonated($this->option('user'));
-        $route = $this->option('route');
-
-        $this->setResource($route);
-
+        $this->route = $this->option('route');
+        $this->resource = $this->setResource($this->route);
 
         $routeParser = new RouteParser();
-        $parsedRoutes = $this->processLaravelRoutes($routeParser, $route);
 
+        //We get POST route because it has most of available attributes defined in the request
+        $route = $this->getPostRoute($this->route);
+
+        //Get formatted attributes list
+        $this->attributes = $this->prepareAttributes($routeParser->getRouteParameters($route));
+
+        //Write the file into /storage/apiary
         $this->write();
     }
 
+    /**
+     * Prepare attributes
+     * @param $parameters
+     * @return null|string
+     */
+    public function prepareAttributes($parameters)
+    {
+        $attributes = null;
 
+        if (array_has($parameters, 'parameters')) {
+            foreach (array_get($parameters, 'parameters') as $name => $parameter) {
+                $enum = null;
+
+                //If enum then need to write available options
+                if (array_get($parameter, 'type') == 'enum') {
+                    foreach (array_get($parameter, 'description') as $enumOption) {
+                        $enum .= "        - $enumOption\n";
+                    }
+                }
+
+                $attributes .= "    - `" . array_last(explode('.', $name)) . "`: `"
+                    . array_get($parameter, 'value')
+                    . "` (" . array_get($parameter, 'type')  . ")\n$enum";
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Writes file based on template
+     */
     public function write()
     {
         if (!File::exists(storage_path('apiary'))) {
@@ -76,12 +106,14 @@ class ApiaryCommand extends Command
         );
     }
 
-
+    /**
+     * Resource usually capitalized singular route
+     * @param $resource
+     */
     public function setResource($resource)
     {
         $this->resource = ucfirst(str_singular($resource));
     }
-
 
     /**
      * @param $actAs
@@ -97,89 +129,50 @@ class ApiaryCommand extends Command
         }
     }
 
-
-    private function processLaravelRoutes(AbstractParser $generator, $routePrefix)
+    /**
+     * Get POST route of resource
+     * @param $routePrefix
+     * @return null
+     */
+    private function getPostRoute($routePrefix)
     {
         $routes = $this->getRoutes();
-        $bindings = $this->getBindings();
 
-        $parsedRoutes = [];
         foreach ($routes as $route) {
-            //$this->info($route->getUri());
-
-            try {
-                $this->db->beginTransaction();
-
-                if (str_contains($route->getUri(), $routePrefix)) {
-
-                    $this->info($route->getUri());
-
-                    if ($parsedRoute = $this->setRouteResponse($route, $generator, $bindings)) {
-                        dd($parsedRoutes);
-                        $parsedRoutes[] = $parsedRoute;
-                    }
-                }
-
-                $this->db->rollBack();
-            } catch (\Exception $e) {
-                $this->error($e->getMessage());
+            if (in_array("POST", $route->getMethods()) and str_contains($route->getUri(), $routePrefix)) {
+                return $route;
             }
         }
 
-        return $parsedRoutes;
+        return null;
     }
 
+    /**
+     * Get routes list
+     * @return mixed
+     */
     private function getRoutes()
     {
         return \Route::getRoutes();
     }
 
-    private function getBindings()
-    {
-        $bindings = $this->option('bindings');
-        if (empty($bindings)) {
-            return [];
-        }
-        $bindings = explode('|', $bindings);
-        $resultBindings = [];
-        foreach ($bindings as $binding) {
-            list($name, $id) = explode(',', $binding);
-            $resultBindings[$name] = $id;
-        }
-
-        return $resultBindings;
-    }
-
-
-    private function setRouteResponse($route, $generator, $bindings)
-    {
-        $generator->processRoute($route, $bindings);
-    }
-
-
     /**
+     * Prepare template
      * @param $fileContent
      * @return mixed
      */
     public function prepare($fileContent)
     {
         $replacings = [
-            '{name}',
-            '{namespace}',
-            '{testNamespace}',
-            '{table}',
-            '{getters}',
-            '{interfaceGetters}',
-            '{fillable}',
-            '{repository}',
-            '{directory}',
-            '{eloquentTest}',
-            '{repositoryTest}',
-            '{repositoryTestData}',
+            '{attributes}',
+            '{route}',
+            '{resource}',
         ];
 
         $replacements = [
-
+            $this->attributes,
+            $this->route,
+            $this->resource,
         ];
 
         return str_replace($replacings, $replacements, $fileContent);
