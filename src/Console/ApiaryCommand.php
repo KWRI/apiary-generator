@@ -56,7 +56,7 @@ class ApiaryCommand extends Command
         $route = $this->getPostRoute($this->route);
 
         //Get formatted attributes list
-        $this->attributes = $this->prepareAttributes($routeParser->getRouteParameters($route));
+        $this->attributes = $this->prepareAttributes($routeParser->getParameters($route));
 
         //Write the file into /storage/apiary
         $this->write();

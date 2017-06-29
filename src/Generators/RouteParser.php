@@ -19,27 +19,14 @@ class RouteParser
     public $rules;
 
     /**
-     * Return parsed request parameters
+     * Parse request
      * @param $route
      * @return mixed
      */
-    public function getRouteParameters($route)
+    public function getParameters($route)
     {
-        return $this->getParameters([
-            'id' => md5($route->getUri().':'.implode($route->getMethods())),
-            'methods' => $route->getMethods(),
-            'uri' => $route->getUri()
-        ], $route->getAction());
-    }
-
-    /**
-     * Parse request
-     * @param $routeData
-     * @param $routeAction
-     * @return mixed
-     */
-    public function getParameters($routeData, $routeAction)
-    {
+        $routeData = [];
+        $routeAction = $route->getAction();
         $this->rules = $this->getRouteRules($routeAction['uses']);
         $validator = Validator::make([], $this->rules);
 
@@ -59,7 +46,7 @@ class RouteParser
 
             if (count($rules)) {
                 foreach ($rules as $rule) {
-                    if (!$this->parseRule($rule, $attribute, $attributeData, $routeData['id'], $routeData['uri'])) {
+                    if (!$this->parseRule($rule, $attribute, $attributeData, $route->getUri())) {
                         $skipRule = true;
                         break;
                     }
@@ -71,7 +58,6 @@ class RouteParser
             }
         }
 
-//dd($routeData);
         return $routeData;
     }
 
@@ -80,11 +66,10 @@ class RouteParser
      * @param $rule
      * @param $attributeName
      * @param $attributeData
-     * @param $seed
      * @param null $uri
      * @return bool
      */
-    protected function parseRule($rule, $attributeName, &$attributeData, $seed, $uri = null)
+    protected function parseRule($rule, $attributeName, &$attributeData, $uri = null)
     {
         $resource = null;
         if ($uri) {
@@ -92,7 +77,6 @@ class RouteParser
         }
 
         $faker = Factory::create();
-        $faker->seed(crc32($seed));
 
         $parsedRule = $this->parseStringRule($rule);
 
@@ -173,7 +157,12 @@ class RouteParser
                 $attributeData['value'] = $faker->date();
                 break;
             case 'string':
-                $attributeData['value'] = 'string';
+                $attribute = array_last(explode('.', $attributeName));
+                try {
+                    $attributeData['value'] = $faker->{$attribute};
+                } catch (\Exception $e) {
+                    $attributeData['value'] = $faker->word;
+                }
                 break;
             case 'integer':
                 $attributeData['value'] = 1;
@@ -189,21 +178,25 @@ class RouteParser
                 break;
         }
 
-        if ($attributeData['value'] == '' and $attributeData['type'] != 'array') {
-            $attributeData['value'] = 1;
-        }
-
         if ($attributeData['type'] == 'array') {
             if (array_has($this->rules, "$attributeName.*")) {
                 $validator = Validator::make([], [array_get($this->rules, "$attributeName.*")]);
 
                 foreach (array_first($validator->getRules()) as $subRule) {
-                    $this->parseRule($subRule, $attributeName, $attributeData, $seed, $uri);
+                    return $this->parseRule($subRule, $attributeName, $attributeData, $uri);
                 }
             }
         }
 
         $attributeData['type'] = $this->getValidType($rule);
+
+        if ($attributeData['value'] == '' and $attributeData['type'] == 'string') {
+            $attributeData['value'] = $faker->word;
+        }
+
+        if ($attributeData['value'] == '' and $attributeData['type'] == 'number') {
+            $attributeData['value'] = $faker->randomDigit;
+        }
 
         return true;
     }
