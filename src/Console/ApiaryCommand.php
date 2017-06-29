@@ -109,6 +109,8 @@ class ApiaryCommand extends Command
             storage_path('apiary/' . $this->resource) . "/" . $this->resource,
             $this->prepare(File::get($this->template))
         );
+
+        $this->info("Apiary document has been written to /storage/$this->resource/$this->resource");
     }
 
     /**
