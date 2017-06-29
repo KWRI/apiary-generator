@@ -95,36 +95,27 @@ class RouteParser
         $faker->seed(crc32($seed));
 
         $parsedRule = $this->parseStringRule($rule);
-        $parsedRule[0] = $this->normalizeRule($parsedRule[0]);
 
         list($rule, $parameters) = $parsedRule;
 
         switch ($rule) {
             case 'email':
                 $attributeData['value'] = $faker->safeEmail;
-                $attributeData['type'] = $rule;
                 break;
             case 'required':
                 $attributeData['required'] = true;
                 break;
             case 'accepted':
                 $attributeData['required'] = true;
-                $attributeData['type'] = 'boolean';
                 $attributeData['value'] = true;
                 break;
             case 'after':
-                $attributeData['type'] = 'string';
                 $attributeData['value'] = date(DATE_RFC850, strtotime('+1 day', strtotime($parameters[0])));
                 break;
             case 'alpha':
                 $attributeData['value'] = $faker->word;
                 break;
-            case 'alpha_dash':
-                break;
-            case 'alpha_num':
-                break;
             case 'in':
-                $attributeData['type'] = 'enum';
                 $attributeData['options'] = $parameters;
                 if (isset(array_flip($parameters)[$resource])) {
                     $attributeData['value'] = $resource;
@@ -139,89 +130,62 @@ class RouteParser
                 if (array_get($attributeData, 'type') === 'numeric' || array_get($attributeData, 'type') === 'integer') {
                     $attributeData['value'] = rand($parameters[0], $parameters[0] + 10);
                 }
-                $attributeData['type'] = 'number';
                 break;
             case 'max':
                 if (array_get($attributeData, 'type') === 'numeric' || array_get($attributeData, 'type') === 'integer') {
                     $attributeData['value'] = rand($parameters[0], $parameters[0] - 10);
                 }
-                $attributeData['type'] = 'number';
                 break;
             case 'between':
-                if (!isset($attributeData['type'])) {
-                    $attributeData['type'] = 'number';
-                }
                 $attributeData['value'] = $faker->numberBetween($parameters[0], $parameters[1]);
                 break;
             case 'before':
-                $attributeData['type'] = 'string';
                 $attributeData['value'] = date(DATE_RFC850, strtotime('-1 day', strtotime($parameters[0])));
                 break;
             case 'date_format':
-                $attributeData['type'] = 'string';
                 $attributeData['value'] = date($parameters[0]);
                 break;
-            case 'different':
-                break;
             case 'digits':
-                $attributeData['type'] = 'numeric';
                 $attributeData['value'] = 1;
                 break;
-            case 'digits_between':
-                $attributeData['type'] = 'number';
-                break;
             case 'file':
-                $attributeData['type'] = 'file';
                 $attributeData['value'] = 'provide file';
                 break;
             case 'image':
                 $attributeData['type'] = 'image';
                 break;
             case 'json':
-                $attributeData['type'] = 'string';
                 $attributeData['value'] = json_encode(['foo', 'bar', 'baz']);
                 break;
             case 'timezone':
                 $attributeData['value'] = $faker->timezone;
                 break;
             case 'active_url':
-                $attributeData['type'] = 'url';
                 $attributeData['value'] = $faker->url;
                 break;
-            case 'regex':
-                $attributeData['type'] = 'string';
-                break;
             case 'boolean':
-                $attributeData['value'] = true;
-                $attributeData['type'] = $rule;
+                $attributeData['value'] = $faker->randomElement(['true', 'false']);
                 break;
             case 'array':
                 $attributeData['value'] = '';
-                $attributeData['type'] = $rule;
                 break;
             case 'date':
                 $attributeData['value'] = $faker->date();
-                $attributeData['type'] = $rule;
                 break;
             case 'string':
                 $attributeData['value'] = 'string';
-                $attributeData['type'] = $rule;
                 break;
             case 'integer':
                 $attributeData['value'] = 1;
-                $attributeData['type'] = 'number';
                 break;
             case 'numeric':
                 $attributeData['value'] = 1;
-                $attributeData['type'] = 'number';
                 break;
             case 'url':
                 $attributeData['value'] = $faker->url;
-                $attributeData['type'] = $rule;
                 break;
             case 'ip':
                 $attributeData['value'] = $faker->ipv4;
-                $attributeData['type'] = $rule;
                 break;
         }
 
@@ -229,21 +193,37 @@ class RouteParser
             $attributeData['value'] = 1;
         }
 
-        if (is_null($attributeData['type'])) {
-            $attributeData['type'] = 'string';
-        }
-
         if ($attributeData['type'] == 'array') {
             if (array_has($this->rules, "$attributeName.*")) {
                 $validator = Validator::make([], [array_get($this->rules, "$attributeName.*")]);
 
-                foreach (array_first($validator->getRules()) as $rule) {
-                    $this->parseRule($rule, $attributeName, $attributeData, $seed, $uri);
+                foreach (array_first($validator->getRules()) as $subRule) {
+                    $this->parseRule($subRule, $attributeName, $attributeData, $seed, $uri);
                 }
             }
         }
 
+        $attributeData['type'] = $this->getValidType($rule);
+
         return true;
+    }
+
+
+    public function getValidType($rule)
+    {
+        if (in_array($rule, ['numeric', 'integer', 'int'])) {
+            return 'number';
+        }
+
+        if (in_array($rule, ['boolean', 'bool'])) {
+            return 'boolean';
+        }
+
+        if (in_array($rule, ['in', 'not in'])) {
+            return 'enum';
+        }
+
+        return 'string';
     }
 
     /**
@@ -291,23 +271,6 @@ class RouteParser
         }
 
         return [strtolower(trim($rules)), $parameters];
-    }
-
-    /**
-     * Replace short rules
-     * @param $rule
-     * @return string
-     */
-    protected function normalizeRule($rule)
-    {
-        switch ($rule) {
-            case 'int':
-                return 'integer';
-            case 'bool':
-                return 'boolean';
-            default:
-                return $rule;
-        }
     }
 
     /**
