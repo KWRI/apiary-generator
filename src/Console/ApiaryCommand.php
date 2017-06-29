@@ -46,7 +46,7 @@ class ApiaryCommand extends Command
     public function handle()
     {
         $this->route = $this->option('route');
-        $this->resource = $this->setResource($this->route);
+        $this->resource = ucfirst(str_singular($this->route));
         $this->setUserToBeImpersonated($this->option('user'));
         $this->url = trim($this->option('url'), '/');
 
@@ -77,14 +77,15 @@ class ApiaryCommand extends Command
 
                 //If enum then need to write available options
                 if (array_get($parameter, 'type') == 'enum') {
-                    foreach (array_get($parameter, 'description') as $enumOption) {
+                    foreach (array_get($parameter, 'options') as $enumOption) {
                         $enum .= "        - $enumOption\n";
                     }
                 }
 
                 $attributes .= "    - `" . array_last(explode('.', $name)) . "`: `"
                     . array_get($parameter, 'value')
-                    . "` (" . array_get($parameter, 'type')  . ")\n$enum";
+                    . "` (" . array_get($parameter, 'type')
+                    . (array_get($parameter, 'required') ? ', required' : '') . ")\n$enum";
             }
         }
 
@@ -111,16 +112,6 @@ class ApiaryCommand extends Command
     }
 
     /**
-     * Resource usually capitalized singular route
-     * @param $resource
-     * @return string
-     */
-    public function setResource($resource)
-    {
-        return $this->resource = ucfirst(str_singular($resource));
-    }
-
-    /**
      * @param $actAs
      */
     private function setUserToBeImpersonated($actAs)
@@ -141,7 +132,7 @@ class ApiaryCommand extends Command
      */
     private function getPostRoute($routePrefix)
     {
-        $routes = $this->getRoutes();
+        $routes = \Route::getRoutes();
 
         foreach ($routes as $route) {
             if (in_array("POST", $route->getMethods()) and str_contains($route->getUri(), $routePrefix)) {
@@ -150,15 +141,6 @@ class ApiaryCommand extends Command
         }
 
         return null;
-    }
-
-    /**
-     * Get routes list
-     * @return mixed
-     */
-    private function getRoutes()
-    {
-        return \Route::getRoutes();
     }
 
     /**
