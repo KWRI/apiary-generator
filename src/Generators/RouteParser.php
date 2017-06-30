@@ -31,176 +31,103 @@ class RouteParser
         $validator = Validator::make([], $this->rules);
 
         foreach ($validator->getRules() as $attribute => $rules) {
-            //Relations temporary removed
+            //Relations build in another loop
             if (str_contains($attribute, 'relationships')) {
                 continue;
             }
 
-            $skipRule = false;
-            $attributeData = [
-                'required' => false,
-                'type' => null,
-                'value' => '',
-                'options' => []
-            ];
+            $routeData['attributes'][$this->getAttributeName($attribute)] = $this->parseRules($rules, $attribute);
+        }
 
-            if (count($rules)) {
-                foreach ($rules as $rule) {
-                    if (!$this->parseRule($rule, $attribute, $attributeData, $route->getUri())) {
-                        $skipRule = true;
-                        break;
-                    }
-                }
-            }
+        $relations = $this->getRelationships($validator->getRules());
+        foreach ($relations as $relationName => $relation) {
+            $validator = Validator::make([], array_get($relation, 'rules'));
 
-            if (!$skipRule) {
-                $routeData['parameters'][$attribute] = $attributeData;
+            foreach ($validator->getRules() as $attr => $rule) {
+                $routeData['relationships'][$relationName][$attr] = $this->parseRules($rule, $attr);
+                $routeData['relationships'][$relationName]['type'] = array_get($relation, 'type');
             }
         }
 
         return $routeData;
     }
 
-    /**
-     * Parse rule rules
-     * @param $rule
-     * @param $attributeName
-     * @param $attributeData
-     * @param null $uri
-     * @return bool
-     */
-    protected function parseRule($rule, $attributeName, &$attributeData, $uri = null)
+    public function getRelationships($validatorRules)
     {
-        $resource = null;
-        if ($uri) {
-            $resource = array_last(explode('/', $uri));
-        }
+        $relations = [];
+        foreach ($validatorRules as $attribute => $rules) {
+            if (!str_contains($attribute, 'relationships')) {
+                continue;
+            }
 
-        $faker = Factory::create();
+            //Get relation name
+            preg_match('/relationships\.(.{0,})\./', $attribute, $matches);
+            $relation = array_last($matches);
 
-        $parsedRule = $this->parseStringRule($rule);
+            //if relation exists, then this relation is parsed. Skipping it.
+            if (array_has($relations, $relation)) {
+                continue;
+            }
 
-        list($rule, $parameters) = $parsedRule;
+            //Get all resource "$relation" rules
+            foreach ($this->rules as $attr => $rule) {
+                if (str_contains($attr, 'relationships') and str_contains($attr, $relation)) {
+                    $realAttr = $this->getAttributeName($attr);
 
-        switch ($rule) {
-            case 'email':
-                $attributeData['value'] = $faker->safeEmail;
-                break;
-            case 'required':
-                $attributeData['required'] = true;
-                break;
-            case 'accepted':
-                $attributeData['required'] = true;
-                $attributeData['value'] = true;
-                break;
-            case 'after':
-                $attributeData['value'] = date(DATE_RFC850, strtotime('+1 day', strtotime($parameters[0])));
-                break;
-            case 'alpha':
-                $attributeData['value'] = $faker->word;
-                break;
-            case 'in':
-                $attributeData['options'] = $parameters;
-                if (isset(array_flip($parameters)[$resource])) {
-                    $attributeData['value'] = $resource;
-                } else {
-                    $attributeData['value'] = $faker->randomElement($parameters);
-                }
-                break;
-            case 'not_in':
-                $attributeData['value'] = $faker->word;
-                break;
-            case 'min':
-                if (array_get($attributeData, 'type') === 'numeric' || array_get($attributeData, 'type') === 'integer') {
-                    $attributeData['value'] = rand($parameters[0], $parameters[0] + 10);
-                }
-                break;
-            case 'max':
-                if (array_get($attributeData, 'type') === 'numeric' || array_get($attributeData, 'type') === 'integer') {
-                    $attributeData['value'] = rand($parameters[0], $parameters[0] - 10);
-                }
-                break;
-            case 'between':
-                $attributeData['value'] = $faker->numberBetween($parameters[0], $parameters[1]);
-                break;
-            case 'before':
-                $attributeData['value'] = date(DATE_RFC850, strtotime('-1 day', strtotime($parameters[0])));
-                break;
-            case 'date_format':
-                $attributeData['value'] = date($parameters[0]);
-                break;
-            case 'digits':
-                $attributeData['value'] = 1;
-                break;
-            case 'file':
-                $attributeData['value'] = 'provide file';
-                break;
-            case 'image':
-                $attributeData['type'] = 'image';
-                break;
-            case 'json':
-                $attributeData['value'] = json_encode(['foo', 'bar', 'baz']);
-                break;
-            case 'timezone':
-                $attributeData['value'] = $faker->timezone;
-                break;
-            case 'active_url':
-                $attributeData['value'] = $faker->url;
-                break;
-            case 'boolean':
-                $attributeData['value'] = $faker->randomElement(['true', 'false']);
-                break;
-            case 'array':
-                $attributeData['value'] = '';
-                break;
-            case 'date':
-                $attributeData['value'] = $faker->date();
-                break;
-            case 'string':
-                $attribute = array_last(explode('.', $attributeName));
-                try {
-                    $attributeData['value'] = $faker->{$attribute};
-                } catch (\Exception $e) {
-                    $attributeData['value'] = $faker->word;
-                }
-                break;
-            case 'integer':
-                $attributeData['value'] = 1;
-                break;
-            case 'numeric':
-                $attributeData['value'] = 1;
-                break;
-            case 'url':
-                $attributeData['value'] = $faker->url;
-                break;
-            case 'ip':
-                $attributeData['value'] = $faker->ipv4;
-                break;
-        }
+                    //Usually data just descriptive. Skipping it
+                    if ($realAttr == 'data') {
+                        continue;
+                    }
 
-        if ($attributeData['type'] == 'array') {
-            if (array_has($this->rules, "$attributeName.*")) {
-                $validator = Validator::make([], [array_get($this->rules, "$attributeName.*")]);
+                    //Creating an empty array if not exists
+                    if (!isset($relations[$relation]['rules'])) {
+                        $relations[$relation]['rules'] = [];
+                    }
 
-                foreach (array_first($validator->getRules()) as $subRule) {
-                    return $this->parseRule($subRule, $attributeName, $attributeData, $uri);
+                    //Merging arrays to avoid numeric indexes
+                    $relations[$relation]['rules'] = array_merge($relations[$relation]['rules'], [$realAttr => $rule]);
+
+                    //Usually '*' means that relationship is multiple
+                    if (str_contains($attr, '*')) {
+                        $relations[$relation]['type'] = 'multiple';
+                    } else {
+                        $relations[$relation]['type'] = 'single';
+                    }
                 }
             }
         }
 
-        $attributeData['type'] = $this->getValidType($rule);
+        return $relations;
+    }
+    
+    protected function parseRules($rules, $attributeName)
+    {
+        $ruleData = [];
 
-        if ($attributeData['value'] == '' and $attributeData['type'] == 'string') {
-            $attributeData['value'] = $faker->word;
+        $ruleData['required'] = $this->isRequired($rules);
+
+        foreach ($rules as $rule) {
+            $parsedRule = $this->parseStringRule($rule);
+            list($rule, $parameters) = $parsedRule;
+
+            if (!array_has($ruleData, 'type') or array_get($ruleData, 'type') == 'string') {
+                $ruleData['type'] = $type = $this->getValidType($rule);
+            }
+
+            $ruleData['value'] = $this->getPossibleValue($rule, $parameters, $type, $attributeName);
+
+            if ($type == 'enum') {
+                $ruleData['options'] = $parameters;
+            }
         }
 
-        if ($attributeData['value'] == '' and $attributeData['type'] == 'number') {
-            $attributeData['value'] = $faker->randomDigit;
-        }
-
-        return true;
+        return $ruleData;
     }
 
+    public function isRequired(array $rules)
+    {
+        return in_array('required', $rules);
+    }
 
     public function getValidType($rule)
     {
@@ -217,6 +144,82 @@ class RouteParser
         }
 
         return 'string';
+    }
+
+
+    public function getPossibleValue($rule, $parameters, $type, $attributeName)
+    {
+        $faker = Factory::create();
+
+        switch ($rule) {
+            case 'email':
+                return $faker->safeEmail;
+            case 'in':
+                return $faker->randomElement($parameters);
+            case 'not_in':
+                return $faker->randomElement($parameters);
+            case 'min':
+                if ($type === 'numeric') {
+                    return rand($parameters[0], $parameters[0] + 10);
+                }
+                break;
+            case 'max':
+                if ($type === 'numeric') {
+                    return rand($parameters[0], $parameters[0] - 10);
+                }
+                break;
+            case 'between':
+                return $faker->numberBetween($parameters[0], $parameters[1]);
+            case 'before':
+                return date(DATE_RFC850, strtotime('-1 day', strtotime($parameters[0])));
+            case 'date_format':
+                return date($parameters[0]);
+            case 'digits':
+                return 1;
+            case 'json':
+                return json_encode(['foo', 'bar', 'baz']);
+            case 'timezone':
+                return $faker->timezone;
+            case 'active_url':
+                return $faker->url;
+            case 'boolean':
+                return $faker->randomElement(['true', 'false']);
+            case 'date':
+                return $faker->date();
+            case 'string':
+                $attribute = $this->getAttributeName($attributeName);
+
+                try {
+                    $value = $faker->{$attribute};
+                } catch (\Exception $e) {
+                    $value = $faker->word;
+                }
+                return $value;
+            case 'integer':
+                return 1;
+            case 'numeric':
+                return 1;
+            case 'url':
+                return $faker->url;
+            case 'ip':
+                return $faker->ipv4;
+        }
+
+        if ($type == 'number') {
+            return $faker->randomDigit;
+        }
+
+        //Assumed that "id" is always integer
+        if ($this->getAttributeName($attributeName) == 'id') {
+            return $faker->randomDigit;
+        }
+
+        return $faker->word;
+    }
+
+    public function getAttributeName(string $attr)
+    {
+        return array_last(explode('.', $attr));
     }
 
     /**

@@ -36,6 +36,8 @@ class ApiaryCommand extends Command
     protected $route;
     protected $url;
     protected $user;
+    protected $relationships = '';
+    protected $additional = '';
 
 
     public function __construct()
@@ -55,8 +57,12 @@ class ApiaryCommand extends Command
         //We get POST route because it has most of available attributes defined in the request
         $route = $this->getPostRoute($this->route);
 
+        $parameters = $routeParser->getParameters($route);
+
         //Get formatted attributes list
-        $this->attributes = $this->prepareAttributes($routeParser->getParameters($route));
+        $this->attributes = $this->prepareAttributes(array_get($parameters, 'attributes'));
+        $this->additional = $this->prepareAdditionalObjects(array_get($parameters, 'relationships'));
+        $this->relationships = $this->prepareRelationships(array_get($parameters, 'relationships'));
 
         //Write the file into /storage/apiary
         $this->write();
@@ -71,18 +77,18 @@ class ApiaryCommand extends Command
     {
         $attributes = null;
 
-        if (array_has($parameters, 'parameters')) {
-            foreach (array_get($parameters, 'parameters') as $name => $parameter) {
+        if (count($parameters)) {
+            foreach ($parameters as $name => $parameter) {
                 $enum = null;
 
                 //If enum then need to write available options
-                if (array_get($parameter, 'type') == 'enum') {
+                if (array_get($parameter, 'type') == 'enum' and is_array(array_get($parameter, 'options'))) {
                     foreach (array_get($parameter, 'options') as $enumOption) {
                         $enum .= "        - $enumOption\n";
                     }
                 }
 
-                $attributes .= "    - `" . array_last(explode('.', $name)) . "`: `"
+                $attributes .= "    - `$name`: `"
                     . array_get($parameter, 'value')
                     . "` (" . array_get($parameter, 'type')
                     . (array_get($parameter, 'required') ? ', required' : '') . ")\n$enum";
@@ -90,6 +96,48 @@ class ApiaryCommand extends Command
         }
 
         return $attributes;
+    }
+
+    /**
+     * Prepare attributes
+     * @param $relationships
+     * @return null|string
+     */
+    public function prepareAdditionalObjects($relationships)
+    {
+        $additional = null;
+
+        if (count($relationships)) {
+            foreach ($relationships as $relationName => $relation) {
+                unset($relation['type']);
+                $additional .= "\n## " . ucfirst(str_singular($relationName))
+                    . " [/$relationName]\n\n+ Attributes\n"
+                    . $this->prepareAttributes($relation);
+            }
+        }
+
+        return $additional;
+    }
+
+    /**
+     * Prepare Relationships
+     * @param $relationships
+     * @return string
+     */
+    public function prepareRelationships($relationships)
+    {
+        $body = "        - data\n";
+
+        if (count($relationships)) {
+            foreach ($relationships as $relationName => $relation) {
+                $body .= "            - $relationName\n                - type: $relationName\n"
+                    . (array_get($relation, 'type') == 'multiple'
+                    ? "                - data (array[" . ucfirst(str_singular($relationName)) . "])\n\n"
+                    : "                - data (" . ucfirst(str_singular($relationName)) . ")\n\n");
+            }
+        }
+
+        return $body;
     }
 
     /**
@@ -154,6 +202,8 @@ class ApiaryCommand extends Command
     {
         $replacings = [
             '{attributes}',
+            '{relationships}',
+            '{additional}',
             '{route}',
             '{resource}',
             '{url}',
@@ -162,6 +212,8 @@ class ApiaryCommand extends Command
 
         $replacements = [
             $this->attributes,
+            $this->relationships,
+            $this->additional,
             $this->route,
             $this->resource,
             $this->url,
