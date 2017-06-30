@@ -61,7 +61,7 @@ class RouteParser
             }
 
             //Get relation name
-            preg_match('/relationships\.(.{0,})\./', $attribute, $matches);
+            preg_match('/relationships\.([a-z_]{0,})\./', $attribute, $matches);
             $relation = array_last($matches);
 
             //if relation exists, then this relation is parsed. Skipping it.
@@ -102,6 +102,7 @@ class RouteParser
     
     protected function parseRules($rules, $attributeName)
     {
+        $faker = Factory::create();
         $ruleData = [];
 
         $ruleData['required'] = $this->isRequired($rules);
@@ -114,11 +115,18 @@ class RouteParser
                 $ruleData['type'] = $type = $this->getValidType($rule);
             }
 
-            $ruleData['value'] = $this->getPossibleValue($rule, $parameters, $type, $attributeName);
+            if (!array_get($ruleData, 'value')) {
+                $ruleData['value'] = $this->getPossibleValue($rule, $parameters, $type, $attributeName);
+            }
 
             if ($type == 'enum') {
                 $ruleData['options'] = $parameters;
+                $ruleData['value'] = $faker->randomElement($parameters);
             }
+        }
+
+        if (!array_get($ruleData, 'value')) {
+            $ruleData['value'] = $faker->word;
         }
 
         return $ruleData;
@@ -150,6 +158,19 @@ class RouteParser
     public function getPossibleValue($rule, $parameters, $type, $attributeName)
     {
         $faker = Factory::create();
+        $attribute = $this->getAttributeName($attributeName);
+
+        $knownFakerReplacements = [
+            'number' => 'phoneNumber',
+            'postal_code' => 'postcode',
+            'lat' => 'latitude',
+            'lng' => 'longitude',
+            'state_region' => 'state',
+        ];
+
+        if (array_has($knownFakerReplacements, $attribute)) {
+            return $faker->{array_get($knownFakerReplacements, $attribute)};
+        }
 
         switch ($rule) {
             case 'email':
@@ -187,12 +208,14 @@ class RouteParser
             case 'date':
                 return $faker->date();
             case 'string':
-                $attribute = $this->getAttributeName($attributeName);
-
                 try {
                     $value = $faker->{$attribute};
                 } catch (\Exception $e) {
-                    $value = $faker->word;
+                    try {
+                        $value = $faker->{camel_case($attribute)};
+                    } catch (\Exception $e) {
+                        $value = $faker->word;
+                    }
                 }
                 return $value;
             case 'integer':
@@ -214,7 +237,7 @@ class RouteParser
             return $faker->randomDigit;
         }
 
-        return $faker->word;
+        return null;
     }
 
     public function getAttributeName(string $attr)

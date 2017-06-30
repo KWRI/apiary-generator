@@ -57,6 +57,10 @@ class ApiaryCommand extends Command
         //We get POST route because it has most of available attributes defined in the request
         $route = $this->getPostRoute($this->route);
 
+        if (!$route) {
+            return $this->error("Route '$this->route' is not found");
+        }
+
         $parameters = $routeParser->getParameters($route);
 
         //Get formatted attributes list
@@ -126,9 +130,10 @@ class ApiaryCommand extends Command
      */
     public function prepareRelationships($relationships)
     {
-        $body = "        - data\n";
-
+        $body = null;
         if (count($relationships)) {
+            $body = "        + relationships\n";
+
             foreach ($relationships as $relationName => $relation) {
                 $body .= "            - $relationName\n                - type: $relationName\n"
                     . (array_get($relation, 'type') == 'multiple'

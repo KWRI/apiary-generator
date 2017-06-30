@@ -14,11 +14,10 @@ HOST: {url}
 ### Create a {resource} [POST]
 
 + Attributes (object)
-    + attributes (object)
+    + data (object)
         - type: {route}
-        - data ({resource})
+        - attributes ({resource})
 
-    + relationships
 {relationships}
 
 + Request (application/vnd.api+json)
