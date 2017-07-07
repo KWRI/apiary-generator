@@ -73,11 +73,48 @@ Available include: {includes}
 
 + Parameters
 
-    - {resource}Id}: `1` (string, required) - Valid contact ID
+    - {resource}Id: `1` (string, required) - Valid contact ID
 
 + Response 200 (application/vnd.api+json)
     + Attributes
-        + data (ContactResponse)
+        + data (object) (string)
+            - type: {route}
+            - id: {resource}Id
+            - attribute ({resource})
+
+
+### Update {resource} [PATCH /{route}/{{resource}Id}]
+
++ Parameters
+
+    - {resource}Id: `1` (string, required) - Valid {resource} ID
+
++ Attributes (object)
+    + data (object)
+        - type: {route} (string)
+        - attributes ({resource})
+
++ Request (application/vnd.api+json)
+
+    + Headers
+
+            Accept: application/vnd.api+json
+            Authorization: Bearer 51371b6f-55be-478b-b658-4d73b9c3ebc6
+
++ Response 200 (application/vnd.api+json)
+    + Attributes
+        + data (object) (string)
+            - type: {route}
+            - id: {resource}Id
+            - attribute ({resource})
+
+### Delete {resource} [DELETE /{route}/{{resource}Id}]
+
++ Parameters
+
+    - {resource}Id: `1` (string, required) - Valid {resource} ID
+
++ Response 204
 
 
 ## Data Structures
@@ -90,93 +127,3 @@ Available include: {includes}
     - 403
 + code (string)
 + title (string)
-
-
-
-------------------------
-
-
-
-### Show Contact [GET /contacts/{contact_id}]
-
-+ Parameters
-
-    - contact_id: `1` (string,required) - Valid contact ID
-
-+ Response 200 (application/vnd.api+json)
-    + Attributes
-        + data (ContactResponse)
-
-### Update Contact [PATCH /contacts/{contact_id}]
-
-+ Parameters
-
-    - contact_id: `1` (string,required) - Valid contact ID
-
-+ Attributes (object)
-    + data (object)
-        - attributes (Contact)
-        - relationships (object)
-          - company (CompanyRelationshipRequest)
-          - emails (EmailsRelationshipRequest)
-          - `social-accounts` (SocialAccountRelationshipRequest)
-          - addresses (AddressesRelationshipRequest)
-          - phones (PhonesRelationshipRequest)
-          - tags (TagsRelationshipRequest)
-
-+ Request (application/vnd.api+json)
-
-    + Headers
-
-            Accept: application/vnd.api+json
-            Authorization: Bearer 51371b6f-55be-478b-b658-4d73b9c3ebc6
-
-+ Response 200 (application/vnd.api+json)
-    + Attributes
-        + data (ContactResponse)
-          - relationships (object)
-              - company (CompanyRelationship)
-              - emails (EmailRelationship)
-              - `social-accounts` (SocialAccountRelationship)
-              - addresses (AddressRelationship)
-              - phones (PhonesRelationship)
-              - tags (TagsRelationship)
-        + included (array)
-          - (CompanyResponse)
-          - (EmailResponse)
-          - (SocialAccountResponse)
-          - (AddressResponse)
-          - (PhoneResponse)
-          - (TagResponse)
-
-### Delete Contact [DELETE /contacts/{contact_id}]
-
-+ Parameters
-
-    - contact_id: `1` (string,required) - Valid contact ID
-
-+ Response 204
-
-### Delete Multiple Contact [DELETE]
-
-+ Attributes (object)
-    + data (array, required)
-        + (object)
-          - id: 1 (number)
-          - type: `contacts` (string)
-        + (object)
-          - id: 2 (number)
-          - type: `contacts` (string)
-        + (object)
-          - id: 3 (number)
-          - type: `contacts` (string)
-
-+ Request (application/vnd.api+json)
-
-    + Headers
-
-            Accept: application/vnd.api+json
-            Authorization: Bearer 51371b6f-55be-478b-b658-4d73b9c3ebc6
-
-+ Response 200 (application/vnd.api+json)
-    + Attributes (MultipleDeleteResponse)

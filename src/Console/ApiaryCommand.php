@@ -213,7 +213,7 @@ class ApiaryCommand extends Command
             '{resource}',
             '{url}',
             '{token}',
-            '{includes}',
+          //  '{includes}',
         ];
 
         $replacements = [
@@ -224,7 +224,7 @@ class ApiaryCommand extends Command
             $this->resource,
             $this->url,
             $this->user->getAccessToken()->getAccessToken(),
-            $this->includes,
+         //   $this->includes,
         ];
 
         return str_replace($replacings, $replacements, $fileContent);
