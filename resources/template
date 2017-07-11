@@ -5,6 +5,8 @@ HOST: {url}
 
 ## {resource} [/{route}]
 
+Available include: {includes}
+
 + Attributes
 
 {attributes}
@@ -31,10 +33,15 @@ HOST: {url}
     + Attributes
         + attributes (object)
             - data ({resource})
+               - relationships (object)
+
+        + included (array)
+
 
     + Headers
 
             Location: {url}/{route}
+
 
 ### List {resource} [GET]
 
@@ -47,21 +54,68 @@ HOST: {url}
 
 + Response 200 (application/vnd.api+json)
     + Attributes
-        + data (array)
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
-            + ({resource})
+        + meta (object)
+          - count: `10` (number)
+          - total: `10` (number)
+        + links (object)
+          - first: `{url}/{route}?page[limit]=10&page[offset]=0`
+          - last: `{url}/{route}?page[limit]=10&page[offset]=10`
+          - next: `{url}/{route}?page[limit]=10&page[offset]=10`
+          - prev: `null`
+        + data (array[{resource}])
 
 + Response 401 (application/vnd.api+json)
     + Attributes
         + errors (Error)
+
+
+### Show Contact [GET /{route}/{{resource}Id}]
+
++ Parameters
+
+    - {resource}Id: `1` (string, required) - Valid contact ID
+
++ Response 200 (application/vnd.api+json)
+    + Attributes
+        + data (object) (string)
+            - type: {route}
+            - id: {resource}Id
+            - attribute ({resource})
+
+
+### Update {resource} [PATCH /{route}/{{resource}Id}]
+
++ Parameters
+
+    - {resource}Id: `1` (string, required) - Valid {resource} ID
+
++ Attributes (object)
+    + data (object)
+        - type: {route} (string)
+        - attributes ({resource})
+
++ Request (application/vnd.api+json)
+
+    + Headers
+
+            Accept: application/vnd.api+json
+            Authorization: Bearer 51371b6f-55be-478b-b658-4d73b9c3ebc6
+
++ Response 200 (application/vnd.api+json)
+    + Attributes
+        + data (object) (string)
+            - type: {route}
+            - id: {resource}Id
+            - attribute ({resource})
+
+### Delete {resource} [DELETE /{route}/{{resource}Id}]
+
++ Parameters
+
+    - {resource}Id: `1` (string, required) - Valid {resource} ID
+
++ Response 204
+
 
 ## Data Structures
 ### Error
